@@ -12,8 +12,12 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
+from dotenv import load_dotenv
 
-# === Config / Env ===
+# ✅ LOAD ENVIRONMENT VARIABLES
+load_dotenv()
+
+# === Config ===
 CONFIG_FILE = "wormgpt_config.json"
 PROMPT_FILE = "system-prompt.txt"
 USER_LANG_FILE = "user_langs.json"
@@ -28,10 +32,18 @@ SITE_URL = "https://github.com/jailideaid/WormGPT"
 SITE_NAME = "WormGPT CLI [ Dangerous And Unsafe ⚠️ ]"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
+# ✅ CEK APAKAH TOKEN ADA
+if not TELEGRAM_TOKEN:
+    print("❌ ERROR: TELEGRAM_TOKEN not found in environment variables!")
+    exit(1)
+
+if not MODEL_CONFIG["key"]:
+    print("❌ ERROR: OPENROUTER_KEY not found in environment variables!")
+    exit(1)
+
 # === Anti-Flood ===
 LAST_MESSAGE_TIME = {}
 FLOOD_DELAY = 3
-
 
 # === Load base system prompt ===
 if os.path.exists(PROMPT_FILE):
@@ -39,7 +51,6 @@ if os.path.exists(PROMPT_FILE):
         BASE_PROMPT = f.read()
 else:
     BASE_PROMPT = "You are WormGPT running on Telegram."
-
 
 # === Ensure user language storage exists ===
 USER_LANGS = {}
@@ -50,14 +61,12 @@ if Path(USER_LANG_FILE).exists():
     except:
         USER_LANGS = {}
 
-
 def save_user_langs():
     try:
         with open(USER_LANG_FILE, "w", encoding="utf-8") as f:
             json.dump(USER_LANGS, f, indent=2)
     except Exception as e:
         print("Failed to save user langs:", e)
-
 
 # === Build unsafe system prompt ===
 def make_system_prompt(lang_code: str) -> str:
@@ -75,11 +84,10 @@ def make_system_prompt(lang_code: str) -> str:
         )
     return safety + BASE_PROMPT
 
-
 # === /start handler ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_user = await context.bot.get_me()
-    context.bot_data["username"] = bot_user.username  # ✅ FIX no attribute error
+    context.bot_data["username"] = bot_user.username
 
     keyboard = [
         [
@@ -99,7 +107,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
 
-
 # === Language Callback ===
 async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -118,11 +125,9 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await query.edit_message_text("Error. Use /start again.")
 
-
 # === Get Language ===
 def get_user_lang(user_id: int) -> str:
     return USER_LANGS.get(str(user_id), "id")
-
 
 # === Message Handler ===
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -188,7 +193,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(reply)
 
-
 # === /setlang command ===
 async def setlang_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
@@ -205,7 +209,6 @@ async def setlang_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_user_langs()
     await update.message.reply_text(f"✅ Language set: {code}")
 
-
 # === Build App ===
 app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
@@ -214,8 +217,12 @@ app.add_handler(CallbackQueryHandler(language_callback, pattern="^lang_"))
 app.add_handler(CommandHandler("setlang", setlang_cmd))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-
 # === Run Bot ===
 def run_bot():
     print("🚀 WormGPT Bot Running... (DeepSeek)")
     app.run_polling()
+
+# ✅ JALANKIN BOT
+if __name__ == "__main__":
+    print("🚀 Starting WormGPT Bot...")
+    run_bot()
